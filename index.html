@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roguelike - 第五阶段（Boss 战：门槛与强度随轮回递增）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0d0f14;
+    font-family: Consolas, Menlo, "Courier New", monospace;
+  }
+
+  canvas {
+    display: block;
+    outline: none;
+    cursor: crosshair;
+  }
+  canvas.paused-cursor { cursor: default; }
+
+  /* ---------- 升级选择面板 ---------- */
+  #upgradePanel {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    background: rgba(6, 8, 14, 0.78);
+    z-index: 10;
+    user-select: none;
+  }
+  #upgradePanel.show { display: flex; }
+
+  #upgradePanel h1 {
+    margin: 0;
+    font-size: 40px;
+    letter-spacing: 4px;
+    color: #ffd93d;
+    text-shadow: 0 0 22px rgba(255, 217, 61, 0.45);
+  }
+
+  #upgradeOptions {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .upgrade-card {
+    position: relative;
+    width: 230px;
+    min-height: 168px;
+    padding: 22px 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.16);
+    border-top: 4px solid var(--accent, #6cb2ff);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #1b2130 0%, #12161f 100%);
+    color: #e6eeff;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.13s ease, border-color 0.13s ease,
+                box-shadow 0.13s ease, background 0.13s ease;
+  }
+
+  .upgrade-card:hover,
+  .upgrade-card:focus-visible {
+    transform: translateY(-6px);
+    border-color: var(--accent, #6cb2ff);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55),
+                0 0 22px -4px var(--accent, #6cb2ff);
+    outline: none;
+  }
+  .upgrade-card:active { transform: translateY(-2px) scale(0.99); }
+
+  .upgrade-card .icon {
+    font-size: 30px;
+    line-height: 1;
+  }
+
+  .upgrade-card .name {
+    font-size: 19px;
+    font-weight: bold;
+    color: var(--accent, #6cb2ff);
+  }
+
+  .upgrade-card .desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(230, 238, 255, 0.78);
+  }
+
+  .upgrade-card kbd {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 12px;
+    color: rgba(230, 238, 255, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  #upgradeHint {
+    font-size: 14px;
+    color: rgba(230, 238, 255, 0.5);
+  }
+
+  /* ---------- 静音按钮（右上角）---------- */
+  #audioBtn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 20;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    background: rgba(10, 14, 22, 0.62);
+    color: #e6eeff;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  }
+  #audioBtn:hover { background: rgba(30, 40, 60, 0.85); border-color: rgba(255, 255, 255, 0.4); }
+  #audioBtn:active { transform: scale(0.94); }
+  #audioBtn:focus-visible { outline: 2px solid #6cb2ff; outline-offset: 2px; }
+
+  /* 图标用两个 <svg> 切换，比换字体字符更可靠 */
+  #audioBtn .ico-on { display: block; }
+  #audioBtn .ico-off { display: none; }
+  #audioBtn.muted { color: rgba(230, 238, 255, 0.45); }
+  #audioBtn.muted .ico-on { display: none; }
+  #audioBtn.muted .ico-off { display: block; }
+</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- 静音按钮：喇叭图标（HTML 按钮，点击开关声音） -->
+  <button id="audioBtn" type="button" title="静音 / 取消静音（M）" aria-label="静音开关">
+    <svg class="ico-on" width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+      <path d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+    </svg>
+    <svg class="ico-off" width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+      <line x1="16" y1="9" x2="22" y2="15"></line>
+      <line x1="22" y1="9" x2="16" y2="15"></line>
+    </svg>
+  </button>
+
+  <!-- 升级三选一面板：升级时显示，点击选项后关闭 -->
+  <div id="upgradePanel">
+    <h1>升 级 ！</h1>
+    <div id="upgradeOptions"></div>
+    <div id="upgradeHint">点击一张卡牌来选择增益（也可以按 1 / 2 / 3 键）</div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
