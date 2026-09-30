@@ -245,7 +245,7 @@
   //  浏览器不允许无交互自动播放，所以第一次点击/按键时才启动。
   // ------------------------------------------------------------
   const MUSIC = {
-    src: 'bgm.mp4.mp4',   // 工作区里的音频（MP4 容器 + AAC，浏览器可直接播）
+    src: 'bgm.mp4',       // 工作区实际文件名 bgm.mp4（MP4 容器 + AAC，浏览器可直接播）
     volume: 0.5,          // 默认音量：适中，不吵
     fadeIn: 0.4           // 淡入时长（秒）
   };
@@ -362,16 +362,19 @@
   // 说明：
   //   冲刺音效 = 代码实时合成（见 playDashWhoosh），**不使用任何音频文件**，
   //              所以这里没有 dash 这一项，也永远不会误用 kill.mp3。
-  //              以后有正式的 dash.mp3 时：加一行 dash: 'dash.mp3'，
+  //              以后有正式的 dash 音频时：加一行 dash: 'dash.mp3'，
   //              并把 startDash 里的 playDashWhoosh() 换成 playSfx('dash') 即可。
-  //   大招音效 = 暂时仍复用工作区里唯一的技能音频 kill.mp3.mp3（降速+加大音量）。
+  //   大招音效 = 暂时复用工作区里唯一的技能音频 kill.mp3（降速 + 加大音量）。
+  //
+  // ★ 这里的所有文件名必须与工作区里的实际文件名完全一致（大小写敏感、不要多写后缀）：
+  //     bgm.mp4 / exp.ogg / hit.wav / shoot.wav / kill.mp3 / levelup.ogg
   const SFX_FILES = {
-    shoot: 'shoot.mp3.wav',
-    hit: 'hit.mp3.wav',
-    kill: 'kill.mp3.mp3',
-    ultimate: 'kill.mp3.mp3',    // ← 有 ultimate.mp3 就改成 'ultimate.mp3'
-    exp: 'exp.ogg.ogg',
-    levelup: 'levelup.ogg.ogg'
+    shoot: 'shoot.wav',
+    hit: 'hit.wav',
+    kill: 'kill.mp3',
+    ultimate: 'kill.mp3',        // ← 有 ultimate 音频就改成对应文件名
+    exp: 'exp.ogg',
+    levelup: 'levelup.ogg'
   };
 
   // 每个音效的音量与节流间隔（毫秒）
